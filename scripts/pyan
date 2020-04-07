@@ -20,7 +20,7 @@ from pyan.writers import DotWriter
 
 
 def main():
-    usage = """usage: %prog FILENAME... [--dot|--tgf|--yed]"""
+    usage = """usage: %prog FILENAME... [options]"""
     desc = ('Analyse one or more Python source files and generate an'
             'approximate call graph of the modules, classes and functions'
             ' within them.')
