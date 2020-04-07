@@ -14,7 +14,7 @@ class Writer(object):
         self.logger = logger or logging.getLogger(__name__)
         self.indent_level = 0
         self.tabstop = tabstop*' '
-        
+
         # added
         self.focus = focus
         self.child_option = child_option

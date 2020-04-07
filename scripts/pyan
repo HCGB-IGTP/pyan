@@ -112,7 +112,7 @@ def main():
 	## output in GraphViz dot format
     writer = DotWriter(
             graph,
-            options=['rankdir='+options.rankdir],
+            options=['spilines=ortho, rankdir='+options.rankdir],
             output=options.filename,
             focus=options.focus,
             child_option=options.go_down,
