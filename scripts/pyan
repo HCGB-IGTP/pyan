@@ -81,9 +81,12 @@ def main():
     parser.add_option("--make-svg",
                       action="store_true", default=False, dest="make_svg",
                       help="try to run dot to make svg automatically")
+    parser.add_option("--focus", dest="focus", help="script name to focus")
+    parser.add_option("--only-child", action="store_true", default=False, dest="go_down", help="Only show children relations")
 
     options, args = parser.parse_args()
     filenames = [fn2 for fn in args for fn2 in glob(fn)]
+    
     if len(args) == 0:
         parser.error('Need one or more filenames to process')
 
@@ -120,6 +123,8 @@ def main():
                 graph,
                 options=['rankdir='+options.rankdir],
                 output=options.filename,
+                focus=options.focus,
+                child_option=options.go_down,
                 logger=logger)
         writer.run()
         if options.make_svg:

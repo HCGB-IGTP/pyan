@@ -4,15 +4,20 @@
 
 import sys
 import logging
-
+import time
+import re
 
 class Writer(object):
-    def __init__(self, graph, output=None, logger=None, tabstop=4):
+    def __init__(self, graph, output=None, logger=None, child_option=False, tabstop=4, focus=None):
         self.graph = graph
         self.output = output
         self.logger = logger or logging.getLogger(__name__)
         self.indent_level = 0
         self.tabstop = tabstop*' '
+        
+        # added
+        self.focus = focus
+        self.child_option = child_option
 
     def log(self, msg):
         self.logger.info(msg)
@@ -33,24 +38,28 @@ class Writer(object):
         except TypeError:
             self.outstream = sys.stdout
         self.start_graph()
-        self.write_subgraph(self.graph)
-        self.write_edges()
+        (edges2include, nodes2include) = self.check_graph(self.focus, self.child_option)
+        
+        self.write_subgraph(self.graph, nodes2include, edges2include)
+        self.write_edges(edges2include)
         self.finish_graph()
         if self.output:
             self.outstream.close()
 
-    def write_subgraph(self, graph):
-        self.start_subgraph(graph)
-        for node in graph.nodes:
-            self.write_node(node)
-        for subgraph in graph.subgraphs:
-            self.write_subgraph(subgraph)
-        self.finish_subgraph(graph)
+    def write_subgraph(self, graph, nodes2include, edges2include):
+        returned = self.start_subgraph(graph, nodes2include)
+        if (returned):                
+            for node in graph.nodes:
+                self.write_node(node, edges2include)
+            for subgraph in graph.subgraphs:
+                self.write_subgraph(subgraph, nodes2include, edges2include)
+            
+            self.finish_subgraph(graph)
 
-    def write_edges(self):
+    def write_edges(self, edges2include):
         self.start_edges()
         for edge in self.graph.edges:
-            self.write_edge(edge)
+            self.write_edge(edge, edges2include)
         self.finish_edges()
 
     def start_graph(self):
@@ -104,11 +113,13 @@ class TgfWriter(Writer):
 
 class DotWriter(Writer):
     def __init__(self, graph,
-                 options=None, output=None, logger=None, tabstop=4):
+                 options=None, output=None, logger=None, tabstop=4, child_option=False, focus=None):
         Writer.__init__(
                 self, graph,
                 output=output,
                 logger=logger,
+                focus=focus,
+                child_option=child_option,
                 tabstop=tabstop)
         options = options or []
         if graph.grouped:
@@ -121,19 +132,59 @@ class DotWriter(Writer):
         self.write('    graph [' + self.options + '];')
         self.indent()
 
-    def start_subgraph(self, graph):
-        self.log('Start subgraph %s' % graph.label)
-        # Name must begin with "cluster" to be recognized as a cluster by GraphViz.
-        self.write(
-                "subgraph cluster_%s {\n" % graph.id)
-        self.indent()
+    def check_graph(self, focus, child_option):
+        edges2include = []
+        print("Child_option: ", child_option)
+        
+        for edge in self.graph.edges:
+            source = edge.source
+            target = edge.target
+            color  = edge.color
+            
+            regex_pattern = r".*" + re.escape(focus) + r".+"
+            if (re.match(regex_pattern, source.id) or 
+                re.match(regex_pattern, target.id)):
+                
+                if child_option:
+                    if (re.match(regex_pattern, source.id)):
+                        edges2include.append(target.id)
+                else:
+                    edges2include.append(source.id)
+                    edges2include.append(target.id)
 
-        # translucent gray (no hue to avoid visual confusion with any
-        # group of colored nodes)
-        self.write(
-            'graph [style="filled,rounded",'
-            'fillcolor="#80808018", label="%s"];'
-            % graph.label)
+        edges2include = list(set(edges2include))
+        
+        nodes2include = []
+        for e in edges2include:
+            nodes2include.append('__'.join(e.split('__')[:-1]))
+        
+        nodes2include = list(set(nodes2include))
+        return (edges2include, nodes2include) 
+    
+    def start_subgraph(self, graph, nodes2include):
+        
+        #print ("Subgraph id: ", graph.id    )
+        #print ("Subgraph target: ", graph.edges.target)
+        #time.sleep(3)
+        if (graph.id == 'G' or graph.id in nodes2include):
+             #print ("Subgraph id: ", graph.id    )
+            #print ("Subgraph label: ", graph.label)
+                
+            self.log('Start subgraph %s' % graph.label)
+            # Name must begin with "cluster" to be recognized as a cluster by GraphViz.
+            self.write(
+                    "subgraph cluster_%s {\n" % graph.id)
+            self.indent()
+    
+            # translucent gray (no hue to avoid visual confusion with any
+            # group of colored nodes)
+            self.write(
+                'graph [style="filled,rounded",'
+                'fillcolor="#80808018", label="%s"];'
+                % graph.label)
+            return (1)
+        else:
+            return (0)
 
     def finish_subgraph(self, graph):
         self.log('Finish subgraph %s' % graph.label)
@@ -141,29 +192,44 @@ class DotWriter(Writer):
         self.dedent()
         self.write('}')
 
-    def write_node(self, node):
-        self.log('Write node %s' % node.label)
-        self.write(
-            '%s [label="%s", style="filled", fillcolor="%s",'
-            ' fontcolor="%s", group="%s"];'
-            % (
-                node.id, node.label,
-                node.fill_color, node.text_color, node.group))
+    def write_node(self, node, focus):
+        
+        #print ("Node id: ", node.id    )
+        #print ("Node label: ", node.label)
+        #time.sleep(1)
+        if (node.id in focus):
+            self.log('Write node %s' % node.label)
+            self.write(
+                '%s [label="%s", style="filled", fillcolor="%s",'
+                ' fontcolor="%s", group="%s"];'
+                % (
+                    node.id, node.label,
+                    node.fill_color, node.text_color, node.group))
+            return (1)
+        else:
+            return (0)
 
-    def write_edge(self, edge):
+    def write_edge(self, edge, edges2include):
         source = edge.source
         target = edge.target
         color  = edge.color
-        if edge.flavor == 'defines':
-            self.write(
-                '    %s -> %s [style="dashed",'
-                ' color="%s"];'
-                % (source.id, target.id, color))
-        else: # edge.flavor == 'uses':
-            self.write(
-                '    %s -> %s [style="solid",'
-                ' color="%s"];'
-                % (source.id, target.id, color))
+        
+        #regex_pattern = r".*" + re.escape(focus) + r".*"
+        if (source.id in edges2include and target.id in edges2include):
+            
+            if edge.flavor == 'defines':
+                self.write(
+                    '    %s -> %s [style="dashed",'
+                    ' color="%s"];'
+                    % (source.id, target.id, color))
+            else: # edge.flavor == 'uses':
+                self.write(
+                    '    %s -> %s [style="solid",'
+                    ' color="%s"];'
+                    % (source.id, target.id, color))
+            return (1)
+        else:
+            return (0)
 
     def finish_graph(self):
         self.write('}')  # terminate "digraph G {"
