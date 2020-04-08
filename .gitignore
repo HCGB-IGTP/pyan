@@ -1,0 +1,5 @@
+/.project
+/.settings
+/.pydevproject
+pyan/__pycache__/
+scripts/__pycache__/
