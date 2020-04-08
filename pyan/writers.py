@@ -214,7 +214,6 @@ class DotWriter(Writer):
         target = edge.target
         color  = edge.color
         
-        #regex_pattern = r".*" + re.escape(focus) + r".*"
         if (source.id in edges2include and target.id in edges2include):
             
             if edge.flavor == 'defines':
