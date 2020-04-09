@@ -102,6 +102,7 @@ def main():
             'nested_groups': options.nested_groups,
             'annotated': options.annotated}
 
+
     # TODO: use an int argument for verbosity
     logger = logging.getLogger(__name__)
     if options.very_verbose:
