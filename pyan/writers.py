@@ -47,7 +47,7 @@ class Writer(object):
             self.outstream.close()
 
     def write_subgraph(self, graph, nodes2include, edges2include):
-        returned = self.start_subgraph(graph, nodes2include)
+        returned = self.start_subgraph(graph, nodes2include, edges2include)
         if (returned):                
             for node in graph.nodes:
                 self.write_node(node, edges2include)
@@ -65,7 +65,7 @@ class Writer(object):
     def start_graph(self):
         pass
 
-    def start_subgraph(self, graph):
+    def start_subgraph(self, graph, nodes2include, egdes2include):
         pass
 
     def write_node(self, node):
@@ -134,8 +134,6 @@ class DotWriter(Writer):
 
     def check_graph(self, focus, child_option):
         edges2include = []
-        print("Child_option: ", child_option)
-        
         for edge in self.graph.edges:
             source = edge.source
             target = edge.target
@@ -161,27 +159,19 @@ class DotWriter(Writer):
         nodes2include = list(set(nodes2include))
         return (edges2include, nodes2include) 
     
-    def start_subgraph(self, graph, nodes2include):
-        
-        #print ("Subgraph id: ", graph.id    )
-        #print ("Subgraph target: ", graph.edges.target)
-        #time.sleep(3)
+    def start_subgraph(self, graph, nodes2include, edges2include):
         if (graph.id == 'G' or graph.id in nodes2include):
              #print ("Subgraph id: ", graph.id    )
             #print ("Subgraph label: ", graph.label)
                 
             self.log('Start subgraph %s' % graph.label)
             # Name must begin with "cluster" to be recognized as a cluster by GraphViz.
-            self.write(
-                    "subgraph cluster_%s {\n" % graph.id)
+            self.write("subgraph cluster_%s {\n" % graph.id)
             self.indent()
     
             # translucent gray (no hue to avoid visual confusion with any
             # group of colored nodes)
-            self.write(
-                'graph [style="filled,rounded",'
-                'fillcolor="#80808018", label="%s"];'
-                % graph.label)
+            self.write('graph [style="filled,rounded",fillcolor="#80808018", label="%s"];' % graph.label)
             return (1)
         else:
             return (0)
@@ -193,18 +183,14 @@ class DotWriter(Writer):
         self.write('}')
 
     def write_node(self, node, focus):
-        
         #print ("Node id: ", node.id    )
         #print ("Node label: ", node.label)
         #time.sleep(1)
         if (node.id in focus):
             self.log('Write node %s' % node.label)
-            self.write(
-                '%s [label="%s", style="filled", fillcolor="%s",'
-                ' fontcolor="%s", group="%s"];'
-                % (
-                    node.id, node.label,
-                    node.fill_color, node.text_color, node.group))
+            self.write('%s [label="%s", style="filled", fillcolor="%s", fontcolor="%s", group="%s"];'
+                % (node.id, node.label, node.fill_color, node.text_color, node.group))
+            
             return (1)
         else:
             return (0)
@@ -217,14 +203,10 @@ class DotWriter(Writer):
         if (source.id in edges2include and target.id in edges2include):
             
             if edge.flavor == 'defines':
-                self.write(
-                    '    %s -> %s [style="dashed",'
-                    ' color="%s"];'
+                self.write('    %s -> %s [style="dashed", color="%s"];'
                     % (source.id, target.id, color))
             else: # edge.flavor == 'uses':
-                self.write(
-                    '    %s -> %s [style="solid",'
-                    ' color="%s"];'
+                self.write('    %s -> %s [style="solid", color="%s"];'
                     % (source.id, target.id, color))
             return (1)
         else:
