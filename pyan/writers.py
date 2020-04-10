@@ -40,6 +40,12 @@ class Writer(object):
         self.start_graph()
         (edges2include, nodes2include) = self.check_graph(self.focus, self.child_option)
         
+        #print ("edges2include: ")
+        #print (edges2include)
+        #print ("nodes2include: ")
+        #print (nodes2include)
+        #exit()
+        
         self.write_subgraph(self.graph, nodes2include, edges2include)
         self.write_edges(edges2include)
         self.finish_graph()
@@ -109,21 +115,28 @@ class DotWriter(Writer):
 
     def check_graph(self, focus, child_option):
         edges2include = []
+        regex_pattern = r".*" + re.escape(focus) + r".+"
+        
         for edge in self.graph.edges:
             source = edge.source
             target = edge.target
             color  = edge.color
             
-            regex_pattern = r".*" + re.escape(focus) + r".+"
+            #print ("#####")
+            #print ("source: ", source.id)
+            #print ("target: ", target.id)
+            
             if (re.match(regex_pattern, source.id) or 
                 re.match(regex_pattern, target.id)):
                 
                 if child_option:
                     if (re.match(regex_pattern, source.id)):
                         edges2include.append(target.id)
+                        #print ("** add target **") 
                 else:
                     edges2include.append(source.id)
                     edges2include.append(target.id)
+                    #print ("** add BOTH **")
 
         edges2include = list(set(edges2include))
         
@@ -131,7 +144,30 @@ class DotWriter(Writer):
         for e in edges2include:
             nodes2include.append('__'.join(e.split('__')[:-1]))
         
+        ## include nodes not visited by any other
+        unique_nodes2include = [] 
+        for subgraph in self.graph.subgraphs:
+            for node in subgraph.nodes:
+                if (re.match(regex_pattern, node.id)):
+                    unique_nodes2include.append(node.id)
+        
+        #print (unique_nodes2include)
+        
+        unique_edges2include = []
+        for edge in self.graph.edges:
+            source = edge.source
+            target = edge.target
+            color  = edge.color
+            
+            if (source.id in unique_nodes2include):
+                unique_edges2include.append(source.id)
+            
+        
+        nodes2include = nodes2include + unique_nodes2include
         nodes2include = list(set(nodes2include))
+        
+        edges2include = edges2include + unique_edges2include
+        edges2include = list(set(edges2include))
         return (edges2include, nodes2include) 
     
     def start_subgraph(self, graph, nodes2include, edges2include):
