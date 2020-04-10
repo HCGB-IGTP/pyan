@@ -5,8 +5,7 @@
 
     This program takes one or more Python source files, does a superficial
     analysis, and constructs a directed graph of the objects in the combined
-    source, and how they define or use each other.  The graph can be output
-    for rendering by e.g. GraphViz or yEd.
+    source, and how they define or use each other.  
 """
 
 import logging
@@ -17,7 +16,7 @@ from optparse import OptionParser  # TODO: migrate to argparse
 
 from pyan.analyzer import CallGraphVisitor
 from pyan.visgraph import VisualGraph
-from pyan.writers import TgfWriter, DotWriter, YedWriter
+from pyan.writers import DotWriter
 
 
 def main():
@@ -26,15 +25,6 @@ def main():
             'approximate call graph of the modules, classes and functions'
             ' within them.')
     parser = OptionParser(usage=usage, description=desc)
-    parser.add_option("--dot",
-                      action="store_true", default=False,
-                      help="output in GraphViz dot format")
-    parser.add_option("--tgf",
-                      action="store_true", default=False,
-                      help="output in Trivial Graph Format")
-    parser.add_option("--yed",
-                      action="store_true", default=False,
-                      help="output in yEd GraphML Format")
     parser.add_option("-f", "--file", dest="filename",
                       help="write graph to FILE", metavar="FILE", default=None)
     parser.add_option("-l", "--log", dest="logname",
@@ -119,30 +109,21 @@ def main():
     v = CallGraphVisitor(filenames, logger)
     graph = VisualGraph.from_visitor(v, options=graph_options, logger=logger)
 
-    if options.dot:
-        writer = DotWriter(
-                graph,
-                options=['rankdir='+options.rankdir],
-                output=options.filename,
-                focus=options.focus,
-                child_option=options.go_down,
-                logger=logger)
-        writer.run()
-        if options.make_svg:
-            base, _ = os.path.splitext(options.filename)
-            svg = base + ".svg"
-            subprocess.run("dot -Tsvg {dot} > {svg}"
-                           .format(dot=options.filename, svg=svg), shell=True)
+	## output in GraphViz dot format
+    writer = DotWriter(
+            graph,
+            options=['rankdir='+options.rankdir],
+            output=options.filename,
+            focus=options.focus,
+            child_option=options.go_down,
+            logger=logger)
+    writer.run()
+    if options.make_svg:
+        base, _ = os.path.splitext(options.filename)
+        svg = base + ".svg"
+        subprocess.run("dot -Tsvg {dot} > {svg}"
+                       .format(dot=options.filename, svg=svg), shell=True)
 
-    if options.tgf:
-        writer = TgfWriter(
-                graph, output=options.filename, logger=logger)
-        writer.run()
-
-    if options.yed:
-        writer = YedWriter(
-                graph, output=options.filename, logger=logger)
-        writer.run()
 
 
 if __name__ == '__main__':
